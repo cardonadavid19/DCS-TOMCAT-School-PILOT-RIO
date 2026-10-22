@@ -534,6 +534,10 @@ body:not(.phos) .ddd-scope::after{content:"";position:absolute;inset:10px;border
 .ptid-grid.slim{max-width:600px;margin:0 auto}
 .cap-round.off{visibility:hidden}
 .secrow{display:flex;gap:4px 10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.secrow .sectag{margin:0}.secrow small{color:var(--muted);font-size:12.5px}
+
+.cdptid{display:grid;grid-template-columns:40px minmax(0,1fr);gap:6px;max-width:440px;margin:8px auto 0}
+.cdptid-pbs{display:flex;flex-direction:column;justify-content:flex-end;gap:8px;padding-bottom:6px}
+#cdPtid{display:block;width:100%;aspect-ratio:1/1}
 </style>
 <style>html{color-scheme:dark}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
 </head>
@@ -874,6 +878,11 @@ body:not(.phos) .ddd-scope::after{content:"";position:absolute;inset:10px;border
         </div>
         <div class="statline" id="egiStat" style="margin-top:10px"></div>
       </div>
+      <div class="box" id="cdPtidBox">
+        <span class="placard">PTID · página táctica <small class="muted">lo que ves en la consola central mientras programas</small></span>
+        <div class="cdptid"><div class="cdptid-pbs"><button type="button" class="pk-pb arrow" id="cdPtUp" aria-label="Aumentar escala">▲</button><button type="button" class="pk-pb arrow" id="cdPtDn" aria-label="Reducir escala">▼</button></div><div class="ptid-screen"><canvas id="cdPtid"></canvas></div></div>
+        <p class="note" style="margin:6px 0 0">Círculos numerados: puntos del plan (el activo en ámbar). Línea ámbar: guía hacia el punto activo. ✕: marcas guardadas. ▲▼ cambian la escala.</p>
+      </div>
       <div class="box">
         <span class="placard">Mapa de referencia <small class="muted">no es una pantalla de cabina · costa aproximada</small></span>
         <canvas id="navMap"></canvas>
@@ -881,6 +890,7 @@ body:not(.phos) .ddd-scope::after{content:"";position:absolute;inset:10px;border
       </div>
       <div class="lower" style="grid-template-columns:minmax(0,1fr)">
         <div class="box"><span class="placard">Ejercicio 1 · arranque, alineación y vuelo</span><ol class="check" id="cdCheck"></ol></div>
+        <div class="box" id="cdWpBox"><span class="placard">Ejercicio 2 · insertar un waypoint nuevo</span><p class="note" style="margin:6px 0">Regla de oro: <b>primero escribes en el scratchpad</b> (la línea entre corchetes) <b>y luego pulsas la LSK</b> del lugar donde va el dato. Mira cada cambio en el PTID de la derecha. Se puede hacer en tierra o en vuelo.</p><button class="btn" type="button" id="cdSkip" style="margin-bottom:8px">Atajo: avión encendido, alineado y en INS</button><ol class="check" id="cdCheck2"></ol></div>
         <div class="box"><span class="placard">Registro de navegación</span><ol id="cdLog" style="list-style:none;margin:0;padding:0;max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:5px;font-size:13px"></ol></div>
       </div>
     </div>
@@ -939,6 +949,7 @@ body:not(.phos) .ddd-scope::after{content:"";position:absolute;inset:10px;border
       <div class="box"><span class="placard">Mapa de referencia <small class="muted">no es una pantalla de cabina</small></span><canvas id="bMap" style="width:100%;height:300px;display:block;border-radius:8px;margin-top:6px"></canvas></div>
       <div class="lower" style="grid-template-columns:minmax(0,1fr)">
         <div class="box"><span class="placard">Ejercicio · arranque, alineación y navegación</span><ol class="check" id="bCheck"></ol></div>
+        <div class="box" id="bWpBox"><span class="placard">Ejercicio 2 · cargar waypoints nuevos (WAY PT 2 y 3)</span><p class="note" style="margin:6px 0">En el F-14B cada punto tiene su casilla fija en el CAP. El orden es siempre: <b>enganchar el punto → CLEAR → prefijo → signo → números → ENTER</b>. Mira el TID: el punto aparece en cuanto tiene latitud y longitud.</p><button class="btn" type="button" id="bSkip" style="margin-bottom:8px">Atajo: avión alineado y en INS</button><ol class="check" id="bCheck2"></ol></div>
         <div class="box"><span class="placard">Registro</span><ol id="bLog" style="list-style:none;margin:0;padding:0;max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:5px;font-size:13px"></ol></div>
       </div>
     </div>
@@ -3602,12 +3613,12 @@ function lskFPLN(n){
   if(!sp){ if(r.end) return; if(r.h){C.edit=r.w; goPage('WPEDIT1');} else {C.edit=r.w; goPage('WPEDIT1');} return; }
   if(r.h) return err('HISTORY: NO EDIT');
   const pos=r.end?C.route.length:r.ri;
-  if(sp==='-'){ if(r.end) return err(); airConfirm('del'+pos,'CONFIRM FLT PLN CHG',()=>{const w=C.route.splice(pos,1)[0]; if(pos<C.act) C.act--; cdLog(`Punto ${w.id} borrado del plan.`); C.sp='';}); return; }
-  if(sp.startsWith('/')){ if(r.end) return err(); const nm=sp.slice(1); if(nm.length>5) return err(); r.w.name=nm?'/'+nm:''; C.sp=''; return; }
+  if(sp==='-'){ if(r.end) return err(); airConfirm('del'+pos,'CONFIRM FLT PLN CHG',()=>{const w=C.route.splice(pos,1)[0]; if(pos<C.act) C.act--; cdLog(`Punto ${w.id} borrado del plan.`); C.sp=''; C.chk.w_del=true;}); return; }
+  if(sp.startsWith('/')){ if(r.end) return err(); const nm=sp.slice(1); if(nm.length>5) return err(); r.w.name=nm?'/'+nm:''; C.sp=''; if(nm) C.chk.w_name=true; return; }
   let pt=parsePoint(sp);
-  if(!pt){const v=parseVec(sp); if(v){const base=r.end?(C.route[C.route.length-1]||acPos()):r.w; pt=Object.assign(move(base,v.brg,v.d),{name:''});}}
+  let viaVec=false; if(!pt){const v=parseVec(sp); if(v){viaVec=true; const base=r.end?(C.route[C.route.length-1]||acPos()):r.w; pt=Object.assign(move(base,v.brg,v.d),{name:''});}}
   if(!pt) return err();
-  airConfirm('ins'+pos+sp,'CONFIRM FLT PLN CHG',()=>{insertAt(pos,pt); C.sp='';});
+  const viaMark=!!C.markSp&&sp===C.markSp.trim(); airConfirm('ins'+pos+sp,'CONFIRM FLT PLN CHG',()=>{insertAt(pos,pt); C.sp=''; if(viaVec) C.chk.w_vec=true; if(viaMark){C.chk.w_mark=true; C.markSp=null;}});
 }
 function lsk(n){
   if(C.page==='OFF'||C.page==='TEST') return;
@@ -3637,7 +3648,7 @@ function lsk(n){
       if(n===1){ if(!sp) return; if(sp.startsWith('/')){w.name=sp.length>1?sp.slice(0,6):'';C.sp='';return;} const p=parsePoint(sp); if(!p) return err(); w.lat=p.lat;w.lon=p.lon; if(p.name) w.name=p.name; C.sp=''; cdLog(`Coordenadas del punto ${w.id} cambiadas.`); }
       else if(n===2){ if(!/^\d{1,2}$/.test(sp)) return err(); w.id=+sp; C.sp=''; }
       else if(n===3){ C.fmt=C.fmt==='DMM'?'DMS':'DMM'; }
-      else if(n===6){ if(!/^\d{1,5}$/.test(sp)) return err(); w.alt=+sp; C.sp=''; }
+      else if(n===6){ if(!/^\d{1,5}$/.test(sp)) return err(); w.alt=+sp; C.sp=''; C.chk.w_alt=true; cdLog(`Punto ${w.id}: altitud ${w.alt} ft.`); }
       else if(n===7) goPage('FPLN');
       else if(n===8){ C.route.forEach(x=>{if(x!==w) x.dest=false}); w.dest=!w.dest; cdLog(w.dest?`Punto ${w.id} designado DEST: ahora se puede elegir como guía DEST en el PB 9 del PTID.`:'DEST quitado.'); }
       break;}
@@ -3670,7 +3681,7 @@ function key(k){
   if(C.err&&k!=='CLR'){C.err=false;C.sp='';}
   const pages={FPLN:'FPLN',PROG:'PROG1',DIR:'DIR',RNAV:'RNAV0',STAT:'STAT',IDX:'IDX',MENU:'MENU'};
   if(pages[k]){goPage(pages[k]); if(k==='PROG'&&C.ac.air) C.chk.prog=true; return;}
-  if(k==='MARK'){C.sp=fmtLL(C.ac.lat,true,3)+fmtLL(C.ac.lon,false,3); C.err=false; annun('MARK: POS EN SP'); return;}
+  if(k==='MARK'){C.sp=fmtLL(C.ac.lat,true,3)+fmtLL(C.ac.lon,false,3); C.markSp=C.sp; C.err=false; annun('MARK: POS EN SP'); return;}
   if(k==='CLR'){ if(C.err){C.err=false;C.sp='';} else C.sp=C.sp.slice(0,-1); return; }
   if(k==='CLRALL'){C.sp='';C.err=false;return;}
   if(k==='F1'){const p=C.prev.pop(); if(p) goPage(p,false); return;}
@@ -3738,6 +3749,43 @@ $('#cdFly').addEventListener('click',()=>{
 });
 $('#cdLand').addEventListener('click',()=>{resetCD(); $('#cdLog').innerHTML=''; $('#cdPwr').textContent='Encender (BRT/ON)'; cdLog('Avión frío en la rampa de Senaki-Kolkhi. Empieza por encender el CDNU.'); syncCD(); renderCDNU();});
 /* mapa */
+let cdPtRng=100;
+function drawCdPtid(){
+  const cv=$('#cdPtid'); if(!cv) return; const r=cv.getBoundingClientRect(), d=Math.min(devicePixelRatio||1,2); const W=Math.round(r.width),H=Math.round(r.height); if(W<10) return;
+  if(cv.width!==W*d){cv.width=W*d;cv.height=H*d;} const c=cv.getContext('2d'); c.setTransform(d,0,0,d,0,0);
+  c.fillStyle='#04070a'; c.fillRect(0,0,W,H);
+  const G='#66c8f4', A='#f0b440', T='#5ef08a', P=acPos(), cx=W/2, cy=H*.58, R=Math.min(W,H)*.42, k=R/cdPtRng;
+  const X=p=>cx+(p.lon-P.lon)*60*Math.cos(P.lat*D2R)*k, Y=p=>cy-(p.lat-P.lat)*60*k;
+  c.save(); c.beginPath(); c.rect(2,2,W-4,H-4); c.clip();
+  c.strokeStyle='rgba(102,200,244,.14)'; for(let i=1;i<=2;i++){c.beginPath(); c.arc(cx,cy,R*i/2,0,7); c.stroke();}
+  const E=C.egi, ok=E.powered&&(E.complete||C.ac.air);
+  // historial
+  c.setLineDash([3,4]); c.strokeStyle='#4a5560'; c.beginPath(); C.hist.forEach((w,i)=>{i?c.lineTo(X(w),Y(w)):c.moveTo(X(w),Y(w))}); c.stroke();
+  // ruta
+  c.setLineDash([]); c.strokeStyle=G; c.lineWidth=1.3; c.beginPath(); C.route.forEach((w,i)=>{if(i<C.act) return; i===C.act?c.moveTo(X(w),Y(w)):c.lineTo(X(w),Y(w))}); c.stroke();
+  const act=C.route[C.act]; if(act){c.strokeStyle=A; c.lineWidth=2; c.beginPath(); c.moveTo(cx,cy); c.lineTo(X(act),Y(act)); c.stroke(); c.lineWidth=1;}
+  c.font='bold 10px "B612 Mono", monospace'; c.textAlign='center';
+  C.route.forEach((w,i)=>{const x=X(w),y=Y(w); const isA=i===C.act, past=i<C.act; c.strokeStyle=c.fillStyle=isA?A:past?'#4a5560':G;
+    if(w.dest){c.beginPath(); c.moveTo(x,y-10); c.lineTo(x+10,y); c.lineTo(x,y+10); c.lineTo(x-10,y); c.closePath(); c.stroke();} else {c.beginPath(); c.arc(x,y,8,0,7); c.stroke();}
+    c.fillText(String(w.id).padStart(2,'0'),x,y+3.5); if(w.name){c.font='9px "B612 Mono", monospace'; c.fillText(w.name.replace('/',''),x,y+20); c.font='bold 10px "B612 Mono", monospace';}});
+  C.marks.forEach((m,i)=>{ if(!m) return; const x=X(m),y=Y(m); c.strokeStyle=c.fillStyle='#e9e5d9'; c.beginPath(); c.moveTo(x-5,y-5); c.lineTo(x+5,y+5); c.moveTo(x+5,y-5); c.lineTo(x-5,y+5); c.stroke(); c.font='9px "B612 Mono", monospace'; c.fillText('M'+(i+1),x,y-8); c.font='bold 10px "B612 Mono", monospace';});
+  // avión propio
+  c.save(); c.translate(cx,cy); c.rotate((C.ac.hdg||0)*D2R); c.strokeStyle=G; c.lineWidth=1.6; c.beginPath(); c.moveTo(0,-11); c.lineTo(0,9); c.moveTo(-9,0); c.lineTo(9,0); c.moveTo(-4,7); c.lineTo(4,7); c.stroke(); c.restore();
+  c.restore();
+  c.font='11px "B612 Mono", monospace'; c.fillStyle=T; c.textAlign='left'; c.fillText(`GND STAB`,8,16); c.fillText(`▲ ${cdPtRng}`,8,H-24); c.fillText('▼',8,H-8);
+  c.textAlign='right';
+  if(act){const v=vec(P,act); c.fillText(`DEST ${String(act.id).padStart(2,'0')}`,W-8,16); c.fillText(`${p3(mag(v.brg))}°  ${v.d.toFixed(1)}NM`,W-8,30);} else c.fillText('SIN PLAN',W-8,16);
+  c.fillText(C.nav==='INS'&&E.complete?'BY':C.nav,W-8,H-8);
+  if(!ok){c.textAlign='center'; c.fillStyle=A; c.font='11px "B612", sans-serif'; c.fillText(E.powered?'alineando: la posición propia aún no es fiable':'EGI apagado: NAV MODE SEL en OFF',cx,H-40);}
+}
+$('#cdSkip').addEventListener('click',()=>{
+  if(!C.on){ $('#cdPwr').click(); }
+  C.page='IDX'; C.prev=[]; C.nav='INS';
+  Object.assign(C.egi,{powered:true,mode:'NAV',t:10,alignT:240,dur:240,q:0.8,coarse:true,complete:true,hold:false,gpsT:40,sats:8,fom:1,posInit:true,stored:true});
+  cdLog('Atajo: CDNU encendido, alineación GYRO COMPASS completa y NAV MODE SEL en INS. Ya puedes programar el plan.'); syncCD(); renderCDNU(); drawCdPtid();
+});
+$('#cdPtUp').addEventListener('click',()=>{const L=[10,25,50,100,200]; cdPtRng=L[Math.min(L.length-1,L.indexOf(cdPtRng)+1)]; drawCdPtid();});
+$('#cdPtDn').addEventListener('click',()=>{const L=[10,25,50,100,200]; cdPtRng=L[Math.max(0,L.indexOf(cdPtRng)-1)]; drawCdPtid();});
 const mapCv=$('#navMap');
 function drawMap(){
   if($('#tab-cdnu').hidden) return;
@@ -3775,6 +3823,18 @@ function statusLines(){
   const ni=navInfo();
   $('#steerStat').innerHTML=!C.ac.air?`<span>En tierra · Senaki-Kolkhi · ${zstr()}</span>`:(navValid()&&ni?`<span>STEER EGI → <b>${String(ni.w.id).padStart(2,'0')} ${esc(wpLabel(ni.w))}</b></span><span>${p3(mag(ni.brg))}°M</span><span>${fd(ni.d)}</span><span>TTG ${ttg(ni.d,ni.gs)}</span><span>XTK ${Math.abs(ni.xtk).toFixed(1)}${ni.xtk>=0?'R':'L'}</span><span>GS ${Math.round(ni.gs)}</span><span>ALT ${Math.round(C.ac.alt)}</span><span>SEQ ${C.seq}</span>`:`<span>Sin guía · rumbo ${p3(mag(C.ac.hdg))}°M · GS ${Math.round(C.ac.gs)} · ALT ${Math.round(C.ac.alt)}</span>`);
 }
+const CHECK2=[
+  ['w_plan','Ten un plan activo. Si aún no cargaste ninguno: IDX → LSK5 (MDL) → LSK3 (FPLN SELECT) → LSK1 (CAP NORTE) → LSK8 → LSK8. Los puntos aparecen en el PTID.'],
+  ['w_fpln','Pulsa FPLN. Ves 4 puntos por página; ▲ ▼ del teclado recorren la lista hasta *END OF FPLN*.'],
+  ['w_sp','Escribe en el scratchpad la coordenada del punto nuevo: N4250.0E04145.0 (N 42°50,0′ E 041°45,0′). CLR borra un carácter.'],
+  ['insert','Pulsa la LSK izquierda del punto que debe quedar DESPUÉS del nuevo: el nuevo se inserta antes. Para agregarlo al final, la LSK de *END OF FPLN*. En vuelo sale CONFIRM FLT PLN CHG: pulsa la misma LSK otra vez.'],
+  ['w_name','Ponle nombre: escribe /ALFA (barra y hasta 5 letras) y pulsa la LSK del punto nuevo.'],
+  ['w_alt','Dale altitud: con el scratchpad vacío pulsa la LSK del punto (abre WP EDIT 1/2), escribe 20000 y pulsa LSK6 (ALT). LSK7 vuelve a FPLN.'],
+  ['w_vec','Otra forma, con vector: escribe 270/20 (rumbo magnético / millas) y pulsa la LSK de un punto: el nuevo queda 20 nm al oeste de ese punto.'],
+  ['w_mark','Desde una marca: pulsa MARK (tu posición pasa al scratchpad), ve a FPLN y pulsa la LSK donde quieres insertarla.'],
+  ['w_del','Borrar un punto: escribe - (guion) y pulsa su LSK.'],
+  ['dir','Ir directo al punto nuevo: DIR → LSK del punto. En el PTID la guía ámbar apunta a él.']
+];
 const CHECK=[
   ['on','Encender el CDNU (perilla OFF/ON, abajo a la derecha) y esperar la autoprueba.'],
   ['brake','Freno de estacionamiento puesto.'],
@@ -3793,6 +3853,8 @@ function updCheck(){
   const E=C.egi;
   if(C.on&&C.page!=='TEST') C.chk.on=true; if(C.brake&&C.chk.on) C.chk.brake=true; if(E.complete) C.chk.complete=true; if(C.nav==='INS'&&E.complete) C.chk.ins=true;
   $('#cdCheck').innerHTML=CHECK.map(([k,t])=>`<li class="${C.chk[k]?'done':''}"><span class="bx"></span><span>${t}</span></li>`).join('');
+  if(C.route.length) C.chk.w_plan=true; if(C.page==='FPLN') C.chk.w_fpln=true; if(C.sp&&parsePoint(C.sp.trim())) C.chk.w_sp=true;
+  $('#cdCheck2').innerHTML=CHECK2.map(([k,t])=>`<li class="${C.chk[k]?'done':''}"><span class="bx"></span><span>${t}</span></li>`).join('');
 }
 /* lección CDNU */
 $('#cdLesson').innerHTML=`<div class="kicker">Navegación del F-14B(U)</div><h2>El CDNU: la computadora de navegación del RIO</h2>
@@ -3849,7 +3911,7 @@ function tick(ts){
   if(C.page==='TEST'){C.testT-=dtR; if(C.testT<=0){C.page='IDX';C.prev=[];}}
   if(C.annunT>0){C.annunT-=dtR; if(C.annunT<=0) C.annun='';}
   let s=dt; while(s>1e-6){const st=Math.min(.25,s); stepEGI(st); stepFly(st); s-=st;}
-  if(!$('#tab-cdnu').hidden){renderCDNU(); mapT+=dtR; if(mapT>.1){mapT=0;drawMap();statusLines();updCheck();}}
+  if(!$('#tab-cdnu').hidden){renderCDNU(); mapT+=dtR; if(mapT>.1){mapT=0;drawMap();drawCdPtid();statusLines();updCheck();}}
   requestAnimationFrame(tick);
 }
 syncCD(); renderCDNU(); cdLog('Avión frío en la rampa de Senaki-Kolkhi. Empieza por encender el CDNU.');
@@ -3916,7 +3978,7 @@ function enter(){
       if(isLat&&B.align.on&&!B.align.fine){restartAlign('Entraste la latitud propia antes de la alineación fina: la alineación se reinicia (así lo hace el AWG-9).');}
     } else B.chk['wp_'+target+(isLat?'lat':'lon')]=true;
     blog(`${PTNAME[target]}: ${isLat?'latitud':'longitud'} ${isLat?fLat(v):fLon(v)} cargada.`);
-  } else if(p==='ALT'){ const np=Object.assign({lat:null,lon:null},cur,{alt:+B.buf}); B.pts[target]=np; blog(`${PTNAME[target]}: altitud ${B.buf} ft.`);}
+  } else if(p==='ALT'){ const np=Object.assign({lat:null,lon:null},cur,{alt:+B.buf}); B.pts[target]=np; B.chk.b_alt=true; blog(`${PTNAME[target]}: altitud ${B.buf} ft.`);}
   else if(p==='HDG'&&B.hook==='MAGVAR'){blog('MAG VAR manual cargada.');}
   else {B.err='ESE PREFIJO NO SE PUEDE ENTRAR AQUÍ'; return;}
   B.buf=''; B.sign='';
@@ -4017,7 +4079,7 @@ function drawTIDnav(){
     c.font='11px "B612", sans-serif'; c.fillStyle='#8f9aa4'; c.fillText(A.stored?'GND ALIGN · STORED HDG':'GND ALIGN',cx,y-48);
   } else {
     // pantalla táctica de navegación (GND STAB, norte arriba)
-    const rng=B.ac.air?100:50, k=(R0*2)/rng; const X=p=>cx+(p.lon-B.ac.lon)*60*Math.cos(B.ac.lat*D2R)*k, Y=p=>cy-(p.lat-B.ac.lat)*60*k;
+    const rng=B.tidRng||(B.ac.air?100:50), k=(R0*2)/rng; const X=p=>cx+(p.lon-B.ac.lon)*60*Math.cos(B.ac.lat*D2R)*k, Y=p=>cy-(p.lat-B.ac.lat)*60*k;
     for(const [id,p] of Object.entries(B.pts)){ if(id==='OWN'||!p||p.lat==null||p.lon==null) continue; const x=X(p),y=Y(p); c.strokeStyle=id===B.dest?'#f0b440':G; c.fillStyle=c.strokeStyle;
       if(id.startsWith('WP')){c.beginPath(); c.arc(x,y,8,0,7); c.stroke(); c.font='bold 10px "B612 Mono", monospace'; c.fillText(id.slice(2),x,y+4);}
       else if(id==='HB'){c.beginPath(); c.moveTo(x-7,y+6); c.lineTo(x-7,y-2); c.lineTo(x,y-8); c.lineTo(x+7,y-2); c.lineTo(x+7,y+6); c.closePath(); c.stroke();}
@@ -4086,11 +4148,25 @@ function drawMapB(){
     const sc=H('div','ptid-screen',C); sc.appendChild($('#navTid')); $('#navTid').style.marginTop='0';
     const dl={WP1:'1',WP2:'2',WP3:'3',FP:'FP',IP:'IP',ST:'ST',HB:'HB'}; const da={WP1:-90,WP2:-60,WP3:-30,FP:0,IP:30,ST:60,HB:90};
     PK.fromSeg('bDest',{parent:R,label:'DEST',size:108,fs:8.5,map:b=>({v:b.dataset.v,l:dl[b.dataset.v],a:da[b.dataset.v]}),extra:[[7,{v:'MAN',l:'MAN',a:120}]],other:()=>blog('MAN: guía manual con rumbo y curso del HSD. No se simula aquí.')});
+    { const bot=H('div','tid-bot',b); PK.knob({parent:bot,label:'RANGE',size:100,fs:8.5,opts:[25,50,100,200,400].map((v,i)=>({v,l:String(v),a:-90+45*i})),get:()=>B.tidRng||(B.ac.air?100:50),set:v=>{B.tidRng=v; render();}}); }
     const cap=PK.makeCAP(host,{loc:'Consola izquierda',noExtras:true,getCat:()=>B.cat,setCat:v=>{B.cat=v;render();},labels:c=>(CATS[c]||[]).map(l=>esc(l||'').replace(/ /g,'<br>')),lit:i=>{const l=(CATS[B.cat]||[])[i]; return !!(HOOKMAP[l]&&HOOKMAP[l]===B.hook);},key:k=>{capKey(k);render();},msg:i=>{msgBtn(i);render();}});
     cap.id='bCAP';
     const _r=render; render=function(){_r(); PK.refresh();};
+    $('#bSkip').addEventListener('click',()=>{ B.ownSet={lat:B.ac.lat,lon:B.ac.lon,alt:40}; B.pts.OWN=B.ownSet; B.nav='INS'; B.align.on=false; B.navOk=true; B.q=0.8; B.ref=true; blog('Atajo: posición propia cargada, alineación completa y NAV MODE en INS. Ya puedes cargar los waypoints.'); render(); });
   }
 })();
+const CHK2=[
+  ['b_tac','En el CAP gira CATEGORY a TAC DATA.'],
+  ['b_hook2','Pulsa el botón redondo junto a WAY PT 2. El tambor DATA READOUT del TID dice WAY PT 2.'],
+  ['wp_WP2lat','CLEAR → LAT (1) → N+ → 4 3 0 0 0 → ENTER. (N 43°00,0′)'],
+  ['wp_WP2lon','CLEAR → LONG (6) → E+ → 0 4 0 3 0 0 → ENTER. (E 040°30,0′)'],
+  ['b_alt','Opcional: CLEAR → ALT (4) → 25000 → ENTER para la altitud del punto.'],
+  ['b_rng','Gira el RANGE del TID a 200 o 400 para ver el punto 2 (está a unos 90 nm).'],
+  ['b_hook3','Engancha WAY PT 3 (botón junto a WAY PT 3).'],
+  ['wp_WP3lat','CLEAR → LAT → N+ → 42515 → ENTER.'],
+  ['wp_WP3lon','CLEAR → LONG → E+ → 041077 → ENTER.'],
+  ['b_dest','Gira la perilla DEST a 2: el TID dibuja la línea de guía y el piloto recibe la guía DEST. Al llegar, el RIO gira DEST al siguiente: el F-14B no secuencia solo.']
+];
 const CHK=[['own','CAP: categoría NAV → OWN A/C (engancha tu avión).'],['ownLat','CLEAR → LAT → N+ → 42143 → ENTER (N 42°14.3′).'],['ownLon','CLEAR → LONG → E+ → 042034 → ENTER (E 042°03.4′).'],['gnd','Freno puesto y NAV MODE en GND ALIGN.'],['ready','Esperar el segundo tick (READY). Mejor aún: el punto en el diamante.'],['ins','NAV MODE a INS: aparece IN.'],['wp_WP1lat','TAC DATA → WAY PT 1 → CLEAR → LAT → N+ → 42350 → ENTER.'],['wp_WP1lon','CLEAR → LONG → E+ → 041400 → ENTER.'],['dest','Selector DEST en WP1 (el piloto tiene STEERING en DEST).'],['air','Soltar el freno y despegar.'],['wp1','Llegar a WP1.'],['dest2','Girar el DEST a WP2 (cárgalo antes en TAC DATA).']];
 function render(){
   $$('#capCat button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===B.cat)));
@@ -4104,6 +4180,8 @@ function render(){
   const P=destPt(); const v=P&&P.lat!=null&&P.lon!=null?vec(B.ac,P):null;
   $('#bStat').innerHTML=`<span>NAV MODE <b>${B.nav}</b></span><span>Solución <b>${B.navOk?(B.nav==='INS'?'IN (INS)':B.nav):'—'}</b></span><span>DEST <b>${PTNAME[B.dest]}</b>${v?` · ${String(Math.round(wrap360(v.brg-MAGVAR))).padStart(3,'0')}°M · ${v.d.toFixed(1)} nm`:' · sin coordenadas'}</span><span>${B.ac.air?`ALT <b>${Math.round(B.ac.alt)}</b> GS <b>${Math.round(B.ac.gs)}</b>`:'En tierra'}</span>`;
   $('#bCheck').innerHTML=CHK.map(([k,t])=>`<li class="${B.chk[k]?'done':''}"><span class="bx"></span><span>${t}</span></li>`).join('');
+  if(B.cat==='TAC') B.chk.b_tac=true; if(B.hook==='WP2') B.chk.b_hook2=true; if(B.hook==='WP3') B.chk.b_hook3=true; if((B.tidRng||0)>=200) B.chk.b_rng=true; if(B.dest==='WP2'&&B.pts.WP2&&B.pts.WP2.lat!=null) B.chk.b_dest=true;
+  $('#bCheck2').innerHTML=CHK2.map(([k,t])=>`<li class="${B.chk[k]?'done':''}"><span class="bx"></span><span>${t}</span></li>`).join('');
 }
 let last=performance.now(), acc=0;
 function tick(ts){
@@ -4172,13 +4250,16 @@ route();
   // CDNU
   const cdcol=q('#cdnu')&&q('#cdnu').parentElement; zone(cdcol,'zone-sim'); tag(cdcol,'sim','Simulador','CDNU de la consola izquierda');
   const how=cdcol&&[...cdcol.querySelectorAll('.box')].find(b=>/Cómo usarlo/.test(b.textContent)); if(how){zone(how,'zone-ins'); tag(how,'ins','Instrucción','cómo se usa el CDNU');}
-  const side=q('#tab-cdnu .cdnu-side'); if(side){ const bx=side.querySelectorAll(':scope > .box'); if(bx[0]){zone(bx[0],'zone-sim'); tag(bx[0],'sim','Simulador','otros controles del procedimiento');} if(bx[1]) tag(bx[1],'ref','Referencia'); }
+  const side=q('#tab-cdnu .cdnu-side'); if(side){ const bx=side.querySelectorAll(':scope > .box'); if(bx[0]){zone(bx[0],'zone-sim'); tag(bx[0],'sim','Simulador','otros controles del procedimiento');} const mp=q('#navMap')&&q('#navMap').closest('.box'); if(mp) tag(mp,'ref','Referencia'); }
   const ck=q('#cdCheck')&&q('#cdCheck').closest('.box'); if(ck){zone(ck,'zone-ins'); tag(ck,'ins','Instrucción','haz el ejercicio paso a paso');}
+  const w2=q('#cdWpBox'); if(w2){zone(w2,'zone-ins'); tag(w2,'ins','Instrucción','tutorial de waypoints');}
+  const pb=q('#cdPtidBox'); if(pb){zone(pb,'zone-sim'); tag(pb,'sim','Simulador','PTID para conciencia situacional');}
   const cl=q('#cdLesson'); if(cl){zone(cl,'zone-ins'); tag(cl,'ins','Instrucción','explicación completa');}
   // CAP nav
   const bp=q('#bPanels'); if(bp){const wrap=bp.parentElement; zone(wrap,'zone-sim'); tag(wrap,'sim','Simulador','TID y CAP del RIO');}
   const bside=q('#tab-capnav .cdnu-side'); if(bside){ const bx=bside.querySelectorAll(':scope > .box'); if(bx[0]){zone(bx[0],'zone-ins'); tag(bx[0],'ins','Instrucción','datos que vas a teclear');} if(bx[1]){zone(bx[1],'zone-sim'); tag(bx[1],'sim','Simulador','avión y piloto');} if(bx[2]) tag(bx[2],'ref','Referencia'); }
   const bk=q('#bCheck')&&q('#bCheck').closest('.box'); if(bk){zone(bk,'zone-ins'); tag(bk,'ins','Instrucción','haz el ejercicio paso a paso');}
+  const b2=q('#bWpBox'); if(b2){zone(b2,'zone-ins'); tag(b2,'ins','Instrucción','tutorial de waypoints');}
   const cpl=q('#capLesson'); if(cpl){zone(cpl,'zone-ins'); tag(cpl,'ins','Instrucción','explicación completa');}
 })();
 </script>
